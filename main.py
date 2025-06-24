@@ -7,35 +7,35 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Get bot token from .env
+# Get bot token from environment variable
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 QUIZ_FILE = "quizzes.json"
 SCORE_FILE = "scores.json"
 
-# ✅ Add your Telegram user ID here
-ADMINS = [856668017]  # Replace with your Telegram ID
+# Add your Telegram user ID(s) here as admin(s)
+ADMINS = [856668017]  # Replace with your actual Telegram ID
 
-# Load quiz questions from file
+# Load existing quizzes
 def load_quizzes():
     if os.path.exists(QUIZ_FILE):
         with open(QUIZ_FILE, "r") as f:
             return json.load(f)
     return {"questions": []}
 
-# Save quiz questions to file
+# Save updated quizzes
 def save_quizzes(quizzes):
     with open(QUIZ_FILE, "w") as f:
         json.dump(quizzes, f)
 
-# Load scores from file
+# Load user scores
 def load_scores():
     if os.path.exists(SCORE_FILE):
         with open(SCORE_FILE, "r") as f:
             return json.load(f)
     return {}
 
-# Save scores to file
+# Save user scores
 def save_scores(scores):
     with open(SCORE_FILE, "w") as f:
         json.dump(scores, f)
@@ -76,7 +76,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/leaderboard - Show top scorers"
     )
 
-# Start the quiz
+# Start quiz
 async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     quizzes = load_quizzes().get("questions", [])
     context.user_data["quizzes"] = quizzes
@@ -89,7 +89,7 @@ async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await send_question(update, context)
 
-# Send one question at a time
+# Send a question
 async def send_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     index = context.user_data["index"]
     quizzes = context.user_data["quizzes"]
@@ -106,12 +106,12 @@ async def send_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
         scores[user] = scores.get(user, 0) + context.user_data["score"]
         save_scores(scores)
 
-# Handle answers and admin question input
+# Handle answers and question input by admin
 async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     user_id = update.effective_user.id
 
-    # Admin adds a question
+    # Admin sends a new question
     if user_id in ADMINS and "Answer:" in text:
         try:
             parts = text.split("\n")
@@ -134,10 +134,10 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
             save_quizzes(quizzes)
             await update.message.reply_text("✅ Question added!")
         except Exception as e:
-            await update.message.reply_text("⚠ Error adding question. Please follow correct format.")
+            await update.message.reply_text("⚠ Error adding question. Please use correct format.")
         return
 
-    # Quiz answering
+    # Handle quiz answers
     if "quizzes" not in context.user_data:
         return
 
@@ -148,7 +148,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     correct = quizzes[index].get("answer", "").lower()
-    if text.strip().lower() == correct.lower():
+    if text.lower() == correct:
         context.user_data["score"] += 1
         await update.message.reply_text("✅ Correct!")
     else:
@@ -165,11 +165,11 @@ async def leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-    result = "\n".join([f"{name}: {score}" for name, score in sorted_scores])
-    await update.message.reply_text("🏆 Leaderboard:\n" + result)
+    leaderboard_text = "\n".join([f"{name}: {score}" for name, score in sorted_scores])
+    await update.message.reply_text("🏆 Leaderboard:\n" + leaderboard_text)
 
-# Run bot
-if __name__ == "__main__":
+# Start the bot
+if _name_ == "_main_":
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
